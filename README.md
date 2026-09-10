@@ -1,43 +1,56 @@
-# Carrera a campo traviesa (concurrencia en Java)
+# Objetivo concurrencia
 
-Simulación del enunciado visto en el curso: **C corredores**, un **puente colgante** que usa **una sola persona a la vez**, y **solo hilos que representan corredores**.
+Ejercicios de concurrencia en Java 17: **monitor**, **semáforos** y un **deadlock** a propósito.
 
-## Enunciado
+```bash
+mvn -q compile
+```
 
-Se simula una carrera a campo traviesa. En la mitad del recorrido hay un puente colgante que puede usar una única persona a la vez.
+---
 
-- Cuando los C corredores llegaron al punto de partida, comienza la carrera.
-- Al llegar al puente, cada corredor espera su turno **en orden de llegada**, lo cruza (un par de minutos) y sigue hasta la meta.
-- Cada corredor pasa **una sola vez** por el puente.
-- Solo hay procesos/hilos de corredores (el puente es un monitor, no un hilo extra).
+## 1. Carrera a campo traviesa (monitor)
 
-## Correspondencia con Ada
+C corredores. En la mitad hay un puente que usa **una persona a la vez**. Arrancan cuando todos llegaron a la partida. En el puente esperan **en orden de llegada**, cruzan y siguen a la meta. Solo hay hilos de corredores; el puente es un monitor (`ReentrantLock` + `Condition`).
 
-| Ada | Java |
+| Teórico | Java |
 | --- | --- |
-| `Process Corredor[0..C-1]` | `Thread` + `Runnable` (`Corredor`) |
-| `Monitor Puente` | clase `Puente` con `ReentrantLock` |
-| `llegue` / `await(cola)` / `signal_all` | `llegue()` + `Condition largada` |
-| `pasar` / `await(cola)` | `pasar()` + cola FIFO de `Condition` |
-| `PasarPuente()` (fuera del monitor) | `pasarPuente()` con `Thread.sleep` |
-| `siguiente` / `signal(cola)` | `siguiente()` despierta al primero de la cola |
-| `join` implícito al terminar | `Thread.join()` en `Main` |
+| `Process Corredor` | `Thread` + `Corredor` |
+| `Monitor Puente` | clase `Puente` |
+| `llegue` / `signal_all` | barrera de largada |
+| `pasar` / `siguiente` | cola FIFO de `Condition` |
 
-En Ada una sola `Cond cola` servía para la largada y para el puente. Acá van **separadas**, para que un `signal` del puente no despierte a alguien que todavía espera la largada (y al revés).
-
-La cola de `Condition` garantiza el **orden de llegada al puente**, que un `wait`/`notify` único no asegura en Java.
-
-## Cómo correrlo
-
-Java 17+ y Maven:
 
 ```bash
-mvn -q compile exec:java
+java -cp target/classes carrera.Main 6
 ```
 
-Con otra cantidad de corredores (en PowerShell hay que entrecomillar el `-D`):
+---
+
+## 2. Máquina expendedora (semáforos)
+
+U usuarios y un repositor. Capacidad de latas: constante `CAPACIDAD` en el código (ahora 10). Turno **FIFO**. Si al usarla no hay latas, avisa al repositor, espera la recarga, saca una y se va. Mientras se recarga, otros pueden **encolarse** (el mutex solo cubre la fila, no la recarga).
+
+| Teórico | Java (`Semaphore`) |
+| --- | --- |
+| `P` / `V` | `acquire()` / `release()` |
+| `mutex` | exclusión de `cola` y `libre` |
+| `esperando[id]` | un semáforo por usuario (turno) |
+| `repositor` / `esperandoBotellas` | aviso y espera de recarga |
+
+Paquete `expendedora`. El argumento es **cantidad de usuarios**, no de latas.
 
 ```bash
-mvn -q compile exec:java "-Dexec.args=8"
+java -cp target/classes expendedora.Main 15
 ```
 
+---
+
+## 3. Deadlock
+
+Dos hilos, dos locks. T1 toma A y pide B; T2 toma B y pide A. Quedan esperándose para siempre.
+
+```bash
+java -cp target/classes deadlock.Main
+```
+
+Va a colgarse: cortar con **Ctrl+C**.
