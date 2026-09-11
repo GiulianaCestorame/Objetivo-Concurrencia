@@ -1,4 +1,4 @@
-# Objetivo concurrencia
+# Objetivo concurrencia 
 
 Ejercicios de concurrencia en Java 17: **monitor**, **semáforos** y un **deadlock** a propósito.
 
